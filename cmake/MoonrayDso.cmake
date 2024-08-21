@@ -53,6 +53,13 @@ function(Moonray_dso_cxx_compile_options target)
                 -march=core-avx2                # Specify the name of the target architecture
                 -mavx                           # x86 options
         )
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(${target}
+            # TODO: Some if not all of these should probably be PUBLIC
+            PRIVATE
+                /arch:AVX2                      # Specify the name of the target architecture
+                /Zc:__cplusplus                 # Make sure the preprocessor is defined to check for C++ version
+        )
     endif()
 endfunction()
 
@@ -60,7 +67,6 @@ function(Moonray_dso_ispc_compile_options target)
     set(commonOptions
         ${GLOBAL_ISPC_FLAGS}
         --opt=force-aligned-memory          # always issue "aligned" vector load and store instructions
-        --pic                               # Generate position-independent code.  Ignored for Windows target
         #--werror                            # Treat warnings as errors
         --wno-perf                          # Don't issue warnings related to performance-related issues
     )
@@ -74,6 +80,8 @@ function(Moonray_dso_ispc_compile_options target)
         get_target_property(ISPC_HEADER_SUFFIX ${target} ISPC_HEADER_SUFFIX)
         get_target_property(ISPC_HEADER_DIRECTORY ${target} ISPC_HEADER_DIRECTORY)
         get_target_property(ISPC_INSTRUCTION_SETS ${target} ISPC_INSTRUCTION_SETS)
+        get_target_property(ISPC_ARCH ${target} ISPC_ARCH)
+        get_target_property(ISPC_TARGET_OS ${target} ISPC_TARGET_OS)
 
         set(configDepFlags "")
         if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -111,9 +119,9 @@ function(Moonray_dso_ispc_compile_options target)
                     -o ${objOut}
                     -h "./${ISPC_HEADER_DIRECTORY}/${srcName}${ISPC_HEADER_SUFFIX}"
                     -M -MF ${depFile}
-                    --arch=aarch64                      # TODO: hardcoded...
+                    --arch=${ISPC_ARCH}
                     --target=${ISPC_INSTRUCTION_SETS}
-                    --target-os=macos
+                    --target-os=${ISPC_TARGET_OS}
                     ${commonOptions}
                     ${configDepFlags}
                     "-I$<JOIN:$<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>,;-I>"
@@ -123,8 +131,11 @@ function(Moonray_dso_ispc_compile_options target)
                 DEPFILE ${depFile}
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${src})
             list(APPEND ISPC_TARGET_OBJECTS ${objOut})
+            #set_source_files_properties(${ISPC_HEADER_DIRECTORY}/${srcName}${ISPC_HEADER_SUFFIX} PROPERTIES GENERATED)
         endforeach()
         target_link_libraries(${target}
+                PRIVATE ${ISPC_TARGET_OBJECTS})
+        target_sources(${target}
                 PRIVATE ${ISPC_TARGET_OBJECTS})
         add_custom_target(${target}_ispc_dep DEPENDS ${ISPC_TARGET_OBJECTS})
         add_dependencies(${target} ${target}_ispc_dep)
@@ -179,6 +190,10 @@ function(Moonray_dso_cxx_compile_definitions target)
             PDI_USE_GLX_1_3                     # TODO: add comment
             _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR=1 # Clang - enable auto_ptr when targeting c++17
             _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE=1 # Clang - ensure std::random_shuffle is available
+            BOOST_ALL_DYN_LINK                  # MSVC
+            BOOST_ALL_NO_LIB                    # MSVC
+            NOMINMAX                            # MSVC
+            _USE_MATH_DEFINES                   # MSVC
 
             $<$<BOOL:${MOONRAY_DWA_BUILD}>:
                 DWA_OPENVDB                     # Enables some SIMD computations in DWA's version of openvdb
@@ -208,17 +223,18 @@ function(Moonray_dso_cxx_compile_features target)
 endfunction()
 
 function(Moonray_dso_link_options target)
-    if(NOT IsDarwinPlatform)
-        target_link_options(${target}
-            PRIVATE
-                -Wl,--enable-new-dtags              # Use RUNPATH instead of RPATH
-        )
-    else()
+    if(IsWindowsPlatform)
+    elseif(IsDarwinPlatform)
         target_link_options(${target}
             PRIVATE
                 -Wl,-ld_classic
                 -undefined dynamic_lookup
     )
+    else()
+        target_link_options(${target}
+            PRIVATE
+                -Wl,--enable-new-dtags              # Use RUNPATH instead of RPATH
+        )
     endif()
 endfunction()
 
@@ -264,8 +280,8 @@ function(moonray_dso_simple targetName)
 
     # full dso
     set_target_properties(${targetName} PROPERTIES PREFIX "") # removes "lib" prefix from .so
-    if(IsDarwinPlatform)
-        set_target_properties(${targetName} PROPERTIES SUFFIX ".so") # switch .dylib for .so
+    if(IsDarwinPlatform OR IsWindowsPlatform)
+        set_target_properties(${targetName} PROPERTIES SUFFIX ".so") # switch .dylib/.dll for .so
     endif()
     target_sources(${targetName} PRIVATE ${src})
     target_include_directories(${targetName} PRIVATE ${includeDir})
@@ -278,6 +294,10 @@ function(moonray_dso_simple targetName)
     # proxy dso
     set_target_properties(${targetName}_proxy PROPERTIES
         PREFIX "" OUTPUT_NAME ${dsoName} SUFFIX ".so.proxy")
+    if(IsWindowsPlatform)
+        set_target_properties(${targetName}_proxy PROPERTIES ARCHIVE_NAME ${targetName}_proxy)
+        set_target_properties(${targetName}_proxy PROPERTIES PDB_NAME ${targetName}_proxy)
+    endif()
     target_sources(${targetName}_proxy PRIVATE ${attrs})
     target_include_directories(${targetName}_proxy PRIVATE ${includeDir})
     target_link_libraries(${targetName}_proxy PUBLIC SceneRdl2::scene_rdl2)
@@ -390,7 +410,7 @@ function(moonray_ispc_dso name)
 
     add_custom_target(${name}_gen_files
         COMMAND
-            ${ISPC_DSO_GEN_SCRIPT} ${jsonSrc}
+            python ${ISPC_DSO_GEN_SCRIPT} ${jsonSrc}
             -o ${genDir} -i ${jsonIncludeDir}
         BYPRODUCTS
             ${genDir}/attributes.cc
@@ -414,6 +434,8 @@ function(moonray_ispc_dso name)
         ISPC_HEADER_SUFFIX _ispc_stubs.h
         ISPC_HEADER_DIRECTORY /${relBinDir}
         ISPC_INSTRUCTION_SETS ${GLOBAL_ISPC_INSTRUCTION_SETS}
+        ISPC_ARCH ${GLOBAL_ISPC_ARCH}
+        ISPC_TARGET_OS ${GLOBAL_ISPC_TARGET_OS}
         LINKER_LANGUAGE CXX
     )
     target_link_libraries(${objLib} PRIVATE ${ARG_DEPENDENCIES})

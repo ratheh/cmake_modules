@@ -17,7 +17,7 @@ else()
 endif()
 
 find_library(Log4cplus_LIBRARIES
-    NAMES log4cplus
+    NAMES log4cplus log4cplusU
     HINTS $ENV{LOG4CPLUS_ROOT}/lib $ENV{Log4cplus_ROOT}/lib /usr/local/lib)
 
 mark_as_advanced(Log4cplus_INCLUDE_DIR Log4cplus_INCLUDE_DIRS Log4cplus_LIBRARIES)
