@@ -491,6 +491,10 @@ function(moonray_ispc_dso name)
     add_library(${name}_proxy SHARED "")
     set_target_properties(${name}_proxy PROPERTIES
         PREFIX "" OUTPUT_NAME ${name} SUFFIX ".so.proxy")
+    if(IsWindowsPlatform)
+        set_target_properties(${name}_proxy PROPERTIES ARCHIVE_NAME ${name}_proxy)
+        set_target_properties(${name}_proxy PROPERTIES PDB_NAME ${name}_proxy)
+    endif()
     target_compile_features(${name}_proxy
         PRIVATE cxx_std_17)
     target_sources(${name}_proxy PRIVATE ${genDir}/attributes.cc)
