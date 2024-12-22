@@ -313,15 +313,35 @@ function(moonray_dso_simple targetName)
        endif()
        # Defines a custom command that when run generates the json files
        # needed for third party apps
-       add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-           POST_BUILD
-           COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
-           --in $<TARGET_FILE:${targetName}_proxy>
-           --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-           DEPENDS ${targetName}_proxy
-           BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-           VERBATIM
-           )
+       if(IsWindowsPlatform)
+           # To run json_exporter at build-time, we need to make sure that all runtime
+           # libraries are available to dynamically link with
+           list(APPEND _env_list
+               ${CMAKE_PREFIX_PATH}/bin
+               ${CMAKE_PREFIX_PATH}/lib
+               $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
+               )
+           list(JOIN _env_list ";" _env)
+           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               POST_BUILD
+               COMMAND ${CMAKE_COMMAND} -E env "PATH=${_env}" "$<TARGET_FILE:rdl2_json_exporter>"
+               --dso_path "$<TARGET_FILE_DIR:${targetName}_proxy>"
+               --in $<TARGET_FILE:${targetName}_proxy>
+               --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               DEPENDS ${targetName}_proxy
+               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               )
+       else()
+           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               POST_BUILD
+               COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
+               --in $<TARGET_FILE:${targetName}_proxy>
+               --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               DEPENDS ${targetName}_proxy
+               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               VERBATIM
+               )
+       endif()
        add_custom_target(coredata_${targetName} ALL DEPENDS
            ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json)
 
@@ -486,15 +506,35 @@ function(moonray_ispc_dso name)
        endif()
        # Defines a custom command that when run generates the json files
        # needed for third party apps
-       add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-           POST_BUILD
-           COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
-           --in $<TARGET_FILE:${name}_proxy>
-           --out ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-           DEPENDS ${name}_proxy
-           BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-           VERBATIM
-           )
+       if(IsWindowsPlatform)
+           # To run json_exporter at build-time, we need to make sure that all runtime
+           # libraries are available to dynamically link with
+           list(APPEND _env_list
+               ${CMAKE_PREFIX_PATH}/bin
+               ${CMAKE_PREFIX_PATH}/lib
+               $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
+               )
+           list(JOIN _env_list ";" _env)
+           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               POST_BUILD
+               COMMAND ${CMAKE_COMMAND} -E env "PATH=${_env}" "$<TARGET_FILE:rdl2_json_exporter>"
+               --dso_path "$<TARGET_FILE_DIR:${targetName}_proxy>"
+               --in $<TARGET_FILE:${targetName}_proxy>
+               --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               DEPENDS ${targetName}_proxy
+               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+               )
+       else()
+           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+               POST_BUILD
+               COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
+               --in $<TARGET_FILE:${name}_proxy>
+               --out ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+               DEPENDS ${name}_proxy
+               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+               VERBATIM
+               )
+       endif()
        add_custom_target(coredata_${name} ALL DEPENDS
            ${CMAKE_CURRENT_BINARY_DIR}/${name}.json)
 
