@@ -3,7 +3,7 @@
 
 find_path(Microhttpd_INCLUDE_DIRS
   NAMES microhttpd.h
-  HINTS $ENV{LIBMICROHTTPD_ROOT}/include /usr/include)
+  HINTS $ENV{LIBMICROHTTPD_ROOT}/include $ENV{LIBMICROHTTPD_ROOT}/include/microhttpd /usr/include)
 find_library(Microhttpd_LIBRARY
   NAMES microhttpd
   HINTS $ENV{LIBMICROHTTPD_ROOT}/lib /lib64)
