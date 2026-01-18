@@ -324,6 +324,7 @@ function(moonray_dso_simple targetName)
            list(APPEND _env_list
                ${CMAKE_PREFIX_PATH}/bin
                ${CMAKE_PREFIX_PATH}/lib
+               ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin
                $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
                $ENV{PATH}
                )
@@ -542,6 +543,7 @@ function(moonray_ispc_dso name)
            list(APPEND _env_list
                ${CMAKE_PREFIX_PATH}/bin
                ${CMAKE_PREFIX_PATH}/lib
+               ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin
                $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
                $ENV{PATH}
                )

@@ -1,6 +1,9 @@
 # Copyright 2024 DreamWorks Animation LLC
 # SPDX-License-Identifier: Apache-2.0
 
+# Enable IN_LIST operator
+cmake_policy(SET CMP0057 NEW)
+
 # ================================================
 # Convenience variables for checking the platform
 # ================================================

@@ -33,7 +33,12 @@ find_library(OpenSubDiv_GPU_LIBRARY
   NAMES osdGPU
   HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib)
 
-set(OpenSubDiv_LIBRARIES "${OpenSubDiv_CPU_LIBRARY};${OpenSubDiv_GPU_LIBRARY}")
+# osdGPU is optional - only include if found
+if(OpenSubDiv_GPU_LIBRARY)
+  set(OpenSubDiv_LIBRARIES "${OpenSubDiv_CPU_LIBRARY};${OpenSubDiv_GPU_LIBRARY}")
+else()
+  set(OpenSubDiv_LIBRARIES "${OpenSubDiv_CPU_LIBRARY}")
+endif()
 
 mark_as_advanced(OpenSubDiv_INCLUDE_DIR OpenSubDiv_INCLUDE_DIRS OpenSubDiv_CPU_LIBRARY OpenSubDiv_GPU_LIBRARY OpenSubDiv_LIBRARIES)
 
@@ -48,17 +53,28 @@ if (OpenSubDiv_FOUND AND NOT TARGET OpenSubDiv::OpenSubDiv)
       IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
       IMPORTED_LOCATION "${OpenSubDiv_CPU_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
-    add_library(OpenSubDiv::osdGPU UNKNOWN IMPORTED)
-    set_target_properties(OpenSubDiv::osdGPU PROPERTIES
-      IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-      IMPORTED_LOCATION "${OpenSubDiv_GPU_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
-    add_library(OpenSubDiv::OpenSubDiv UNKNOWN IMPORTED)
-    set_target_properties(OpenSubDiv::OpenSubDiv PROPERTIES
-      IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-      IMPORTED_LOCATION "${OpenSubDiv_GPU_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
-    target_link_libraries(OpenSubDiv::OpenSubDiv 
-      INTERFACE OpenSubDiv::osdCPU)
+
+    # osdGPU is optional
+    if(OpenSubDiv_GPU_LIBRARY)
+        add_library(OpenSubDiv::osdGPU UNKNOWN IMPORTED)
+        set_target_properties(OpenSubDiv::osdGPU PROPERTIES
+          IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+          IMPORTED_LOCATION "${OpenSubDiv_GPU_LIBRARY}"
+          INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
+        add_library(OpenSubDiv::OpenSubDiv UNKNOWN IMPORTED)
+        set_target_properties(OpenSubDiv::OpenSubDiv PROPERTIES
+          IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+          IMPORTED_LOCATION "${OpenSubDiv_GPU_LIBRARY}"
+          INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
+        target_link_libraries(OpenSubDiv::OpenSubDiv
+          INTERFACE OpenSubDiv::osdCPU)
+    else()
+        # CPU only - create OpenSubDiv::OpenSubDiv pointing to CPU library
+        add_library(OpenSubDiv::OpenSubDiv UNKNOWN IMPORTED)
+        set_target_properties(OpenSubDiv::OpenSubDiv PROPERTIES
+          IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+          IMPORTED_LOCATION "${OpenSubDiv_CPU_LIBRARY}"
+          INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
+    endif()
 endif()
 
