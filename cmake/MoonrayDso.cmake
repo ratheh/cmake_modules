@@ -311,48 +311,30 @@ function(moonray_dso_simple targetName)
     Moonray_dso_cxx_compile_options(${targetName}_proxy)
     Moonray_dso_link_options(${targetName}_proxy)
 
-   # json class file
-   if (NOT ARG_TEST_DSO)
+   # json class file (coredata) - skip on Windows due to rdl2_json_exporter crash.
+   # Coredata JSON files are used for DCC plugin UIs, not required for rendering.
+   # TODO: Fix rdl2_json_exporter crash on Windows to enable coredata generation.
+   if (NOT ARG_TEST_DSO AND NOT IsWindowsPlatform)
        if (XCODE)
            set(configDir "${CMAKE_BUILD_TYPE}")
        endif()
        # Defines a custom command that when run generates the json files
        # needed for third party apps
-       if(IsWindowsPlatform)
-           # To run json_exporter at build-time, we need to make sure that all runtime
-           # libraries are available to dynamically link with
-           list(APPEND _env_list
-               ${CMAKE_PREFIX_PATH}/bin
-               ${CMAKE_PREFIX_PATH}/lib
-               ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin
-               $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
-               $ENV{PATH}
-               )
-           list(JOIN _env_list ";" _env)
-           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               POST_BUILD
-               COMMAND ${CMAKE_COMMAND} -E env "PATH=${_env}" "rdl2_json_exporter"
-               --dso_path "$<TARGET_FILE_DIR:${targetName}_proxy>"
-               --in $<TARGET_FILE:${targetName}_proxy>
-               --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               DEPENDS ${targetName}_proxy
-               #BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               )
-       else()
-           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               POST_BUILD
-               COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
-               --in $<TARGET_FILE:${targetName}_proxy>
-               --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               DEPENDS ${targetName}_proxy
-               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
-               VERBATIM
-               )
-       endif()
+       add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+           POST_BUILD
+           COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
+           --in $<TARGET_FILE:${targetName}_proxy>
+           --out ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+           DEPENDS ${targetName}_proxy
+           BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
+           VERBATIM
+           )
        add_custom_target(coredata_${targetName} ALL DEPENDS
            ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json)
+   endif()
 
-       # copy resulting DSOs to <build>/rdl2dso dir to be found by tests
+   # copy resulting DSOs to <build>/rdl2dso dir to be found by tests
+   if (NOT ARG_TEST_DSO)
        if (IsWindowsPlatform)
            add_custom_command(TARGET ${targetName} POST_BUILD
                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/rdl2dso
@@ -386,7 +368,8 @@ function(moonray_dso_simple targetName)
                 NAMELINK_SKIP
                 )
         endif()
-        if (NOT ARG_TEST_DSO)
+        # Skip coredata JSON install on Windows (not generated)
+        if (NOT ARG_TEST_DSO AND NOT IsWindowsPlatform)
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${dsoName}.json
                 COMPONENT ${targetName} DESTINATION coredata
                 )
@@ -530,48 +513,30 @@ function(moonray_ispc_dso name)
     Moonray_dso_cxx_compile_options(${name}_proxy)
     Moonray_dso_link_options(${name}_proxy)
 
-   # json class file
-   if (NOT ARG_TEST_DSO)
+   # json class file (coredata) - skip on Windows due to rdl2_json_exporter crash.
+   # Coredata JSON files are used for DCC plugin UIs, not required for rendering.
+   # TODO: Fix rdl2_json_exporter crash on Windows to enable coredata generation.
+   if (NOT ARG_TEST_DSO AND NOT IsWindowsPlatform)
        if (XCODE)
            set(configDir "${CMAKE_BUILD_TYPE}")
        endif()
        # Defines a custom command that when run generates the json files
        # needed for third party apps
-       if(IsWindowsPlatform)
-           # To run json_exporter at build-time, we need to make sure that all runtime
-           # libraries are available to dynamically link with
-           list(APPEND _env_list
-               ${CMAKE_PREFIX_PATH}/bin
-               ${CMAKE_PREFIX_PATH}/lib
-               ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin
-               $ENV{BUILD_DIR}/bin $ENV{BUILD_DIR}/lib $ENV{DEPS_ROOT}/bin $ENV{DEPS_ROOT}/lib
-               $ENV{PATH}
-               )
-           list(JOIN _env_list ";" _env)
-           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               POST_BUILD
-               COMMAND ${CMAKE_COMMAND} -E env "PATH=${_env}" "rdl2_json_exporter"
-               --dso_path "$<TARGET_FILE_DIR:${name}_proxy>"
-               --in $<TARGET_FILE:${name}_proxy>
-               --out ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               DEPENDS ${name}_proxy
-               #BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               )
-       else()
-           add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               POST_BUILD
-               COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
-               --in $<TARGET_FILE:${name}_proxy>
-               --out ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               DEPENDS ${name}_proxy
-               BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
-               VERBATIM
-               )
-       endif()
+       add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+           POST_BUILD
+           COMMAND rdl2_json_exporter --dso_path ${CMAKE_CURRENT_BINARY_DIR}/${configDir}
+           --in $<TARGET_FILE:${name}_proxy>
+           --out ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+           DEPENDS ${name}_proxy
+           BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
+           VERBATIM
+           )
        add_custom_target(coredata_${name} ALL DEPENDS
            ${CMAKE_CURRENT_BINARY_DIR}/${name}.json)
+   endif()
 
-       # copy resulting DSO to <build>/rdl2dso dir to be found by tests
+   # copy resulting DSO to <build>/rdl2dso dir to be found by tests
+   if (NOT ARG_TEST_DSO)
        if (IsWindowsPlatform)
           add_custom_command(TARGET ${name} POST_BUILD
               COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/rdl2dso
@@ -605,7 +570,8 @@ function(moonray_ispc_dso name)
                 NAMELINK_SKIP
             )
         endif()
-        if (NOT ARG_TEST_DSO)
+        # Skip coredata JSON install on Windows (not generated)
+        if (NOT ARG_TEST_DSO AND NOT IsWindowsPlatform)
             install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.json
                 COMPONENT ${name} DESTINATION coredata
             )
