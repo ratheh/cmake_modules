@@ -25,13 +25,30 @@ find_path(OpenSubDiv_INCLUDE_DIR
 # need to find <opensubdiv/version.h>
 set(OpenSubDiv_INCLUDE_DIRS ${OpenSubDiv_INCLUDE_DIR}/..)
 
+# Find Release library first (avoid linking debug libs in release builds)
 find_library(OpenSubDiv_CPU_LIBRARY
   NAMES osdCPU
-  HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib)
+  HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib
+  PATH_SUFFIXES lib
+  NO_DEFAULT_PATH)
+
+if(NOT OpenSubDiv_CPU_LIBRARY)
+  find_library(OpenSubDiv_CPU_LIBRARY
+    NAMES osdCPU
+    HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib)
+endif()
 
 find_library(OpenSubDiv_GPU_LIBRARY
   NAMES osdGPU
-  HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib)
+  HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib
+  PATH_SUFFIXES lib
+  NO_DEFAULT_PATH)
+
+if(NOT OpenSubDiv_GPU_LIBRARY)
+  find_library(OpenSubDiv_GPU_LIBRARY
+    NAMES osdGPU
+    HINTS $ENV{OPENSUBDIV_ROOT}/lib $ENV{OpenSubDiv_ROOT}/lib /usr/local/lib)
+endif()
 
 # osdGPU is optional - only include if found
 if(OpenSubDiv_GPU_LIBRARY)
