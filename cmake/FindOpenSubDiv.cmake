@@ -17,6 +17,43 @@
 # ``OpenSubDiv_LIBRARIES``
 #   the libraries to link against to use OpenSubDiv
 #
+
+# First, try to find OpenSubdiv via vcpkg/CMake config (handles debug/release properly)
+# vcpkg provides OpenSubdiv as "OpenSubdiv" (note the case) with target OpenSubdiv::osdCPU_static
+find_package(OpenSubdiv CONFIG QUIET)
+
+if(OpenSubdiv_FOUND AND TARGET OpenSubdiv::osdCPU_static)
+    message(STATUS "Found OpenSubdiv via CMake config")
+
+    # Get the include directory from the target
+    get_target_property(_osd_include_dirs OpenSubdiv::osdCPU_static INTERFACE_INCLUDE_DIRECTORIES)
+    if(_osd_include_dirs)
+        set(OpenSubDiv_INCLUDE_DIRS ${_osd_include_dirs})
+    endif()
+
+    # Set found status
+    set(OpenSubDiv_FOUND TRUE)
+
+    # Create our alias target if it doesn't exist
+    if(NOT TARGET OpenSubDiv::OpenSubDiv)
+        # Create an interface library that links to the vcpkg target
+        add_library(OpenSubDiv::OpenSubDiv INTERFACE IMPORTED)
+        set_target_properties(OpenSubDiv::OpenSubDiv PROPERTIES
+            INTERFACE_LINK_LIBRARIES OpenSubdiv::osdCPU_static)
+    endif()
+
+    if(NOT TARGET OpenSubDiv::osdCPU)
+        add_library(OpenSubDiv::osdCPU INTERFACE IMPORTED)
+        set_target_properties(OpenSubDiv::osdCPU PROPERTIES
+            INTERFACE_LINK_LIBRARIES OpenSubdiv::osdCPU_static)
+    endif()
+
+    return()
+endif()
+
+# Fallback: Manual search for OpenSubdiv
+message(STATUS "OpenSubdiv CMake config not found, falling back to manual search")
+
 find_path(OpenSubDiv_INCLUDE_DIR
   NAMES version.h
   PATH_SUFFIXES opensubdiv
@@ -94,4 +131,3 @@ if (OpenSubDiv_FOUND AND NOT TARGET OpenSubDiv::OpenSubDiv)
           INTERFACE_INCLUDE_DIRECTORIES "${OpenSubDiv_INCLUDE_DIRS}")
     endif()
 endif()
-
