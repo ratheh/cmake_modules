@@ -227,7 +227,7 @@ function(Moonray_dso_link_options target)
     elseif(IsDarwinPlatform)
         target_link_options(${target}
             PRIVATE
-                -Wl,-ld_classic
+                -fuse-ld=/Applications/MoonRay/dedup-ld.sh
                 -undefined dynamic_lookup
     )
     else()

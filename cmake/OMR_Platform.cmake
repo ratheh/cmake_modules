@@ -63,7 +63,7 @@ if(IsDarwinPlatform)
 
     set(ISPC_COMPILER $ENV{ISPC} CACHE STRING "Path to ISPC compiler")
     set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "-o linker-signed")
-    set(GLOBAL_LINK_FLAGS "-Wl,-ld_classic")
+    set(GLOBAL_LINK_FLAGS "-fuse-ld=/Applications/MoonRay/dedup-ld.sh")
     set(GLOBAL_INSTALL_RPATH "@loader_path/" "@loader_path/../lib")
     set(GLOBAL_ISPC_FLAGS -D__aarch64__ -D__APPLE__ -D__ARM_NEON__ --pic)
     set(GLOBAL_ISPC_INSTRUCTION_SETS neon-i32x4)
